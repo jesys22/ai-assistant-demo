@@ -1,0 +1,162 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:1234/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"phi-line_14b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты менеджер интернет-магазина. Отвечай на вопрос клиента, используя только факты ниже. Если ответа нет в фактах — ответь одной фразой: 'Уточню информацию у коллег'. Не выдумывай.\\n\\nФакты:\\nДоставка: 3-5 дней, 300 руб. Бесплатно от 5000 руб.\\nВозврат: 14 дней.\\nНаушники X: 3000 руб.\\nЧехол Y: 500 руб.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.body.client_message }}\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 120\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        -192
+      ],
+      "id": "e0fea532-8ff1-4479-af7c-b167c0393c64",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:1234/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"phi-line_14b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты sales-тренер. Клиент написал сообщение. Определи, связано ли оно с товарами: наушники X (3000 руб) или чехол Y (500 руб).\\n\\nЕсли связано — напиши подсказку менеджеру: что предложить и почему. Максимум 2 предложения.\\n\\nЕсли НЕ связано (например, вопрос только про доставку или возврат) — напиши: 'Допродажа не требуется'.\\n\\nПример подсказки: 'Предложите чехол Y к наушникам X — идеальный аксессуар, всего 500 руб.'\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Сообщение клиента: {{ $json.body.client_message }}\"\n    }\n  ],\n  \"temperature\": 0.4,\n  \"max_tokens\": 100\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        -160
+      ],
+      "id": "19c7053f-18c6-4044-8d81-5b924e7f8ad8",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-assistant",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "9851373c-7ac6-415e-917f-8960b23149a2",
+      "name": "Webhook",
+      "webhookId": "356fa9ff-2c1c-4222-8018-9aeb00f4af54"
+    },
+    {
+      "parameters": {
+        "jsCode": "const support = $('HTTP Request').first().json.choices[0].message.content;\nconst upsell = $('HTTP Request1').first().json.choices[0].message.content;\n\nreturn [{\n  json: {\n    reply_to_client: support,\n    upsell_hint: upsell\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -176
+      ],
+      "id": "282ab45d-dde7-4f41-8745-1e2a59f128eb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        816,
+        -192
+      ],
+      "id": "09ac87ba-7642-4433-bcf8-6832e44540d6",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "906c0902-5238-46fe-9949-257f1c80757e",
+  "meta": {
+    "instanceId": "e956d1dee3148b92ec765942eb183fc40d4a05aa504222e0893db08c8cd41230"
+  },
+  "nodeGroups": [],
+  "id": "OFPgtfZnl4aqAGM2",
+  "tags": []
+}
